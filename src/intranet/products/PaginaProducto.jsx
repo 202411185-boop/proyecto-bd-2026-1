@@ -9,7 +9,7 @@ export default function InventoryPage() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
-      <h2>📦 Control de Inventario General (WMS)</h2>
+      <h2>📦 Control de Productos (WMS)</h2>
       <p>Gestión directa de la tabla <code>Products</code>.</p>
       
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
