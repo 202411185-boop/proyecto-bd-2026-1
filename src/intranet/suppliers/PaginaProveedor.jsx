@@ -1,14 +1,64 @@
 import React from 'react';
+import { useSuppliers } from './hooks/useSuppliers';
+import SearchBar from './components/SearchBar';
+import SuppliersTable from './components/SuppliersTable';
+import Pagination from './components/Pagination';
+import { styles } from './styles';
 
-export default function SuppliersPage() {
+export default function PaginaProveedor() {
+  const {
+    proveedores,
+    loading,
+    error,
+    busqueda,
+    pagina,
+    totalPaginas,
+    setPagina,
+    handleBuscar,
+    handleEliminar,
+  } = useSuppliers();
+
+  const handleEditar = (supplierid) => {
+    // TODO: conectar a modal o ruta de edición cuando esté lista
+    console.log('Editar proveedor', supplierid);
+  };
+
+  const handleAgregar = () => {
+    // TODO: conectar a modal o ruta de creación cuando esté lista
+    console.log('Agregar nuevo proveedor');
+  };
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <h2>🚚 Directorio de Proveedores y Fabricantes</h2>
-      <p>Abastecedores directos vinculados a la cadena de suministros.</p>
-      <ul>
-        <li><strong>Exotic Liquids</strong> (Londres) - Contacto: Charlotte Cooper</li>
-        <li><strong>New Orleans Cajun Delights</strong> (New Orleans) - Contacto: Shelley Burke</li>
-      </ul>
+    <div style={styles.page}>
+      <h1 style={styles.titulo}>Proveedores</h1>
+
+      <div style={styles.panel}>
+        <div style={styles.barraSuperior}>
+          <SearchBar
+            value={busqueda}
+            onChange={handleBuscar}
+            placeholder="Busca por nombre"
+            style={styles.buscador}
+          />
+          <button style={styles.botonAgregar} onClick={handleAgregar}>
+            Agregar
+          </button>
+        </div>
+
+        <SuppliersTable
+          proveedores={proveedores}
+          loading={loading}
+          error={error}
+          onEditar={handleEditar}
+          onEliminar={handleEliminar}
+        />
+
+        <Pagination
+          pagina={pagina}
+          totalPaginas={totalPaginas}
+          onCambiarPagina={setPagina}
+        />
+      </div>
     </div>
   );
 }
