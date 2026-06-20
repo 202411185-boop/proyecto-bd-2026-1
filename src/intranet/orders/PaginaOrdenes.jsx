@@ -1,23 +1,101 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useOrders } from './hooks/useOrders';
+import SearchBar from './components/SearchBar';
+import OrdersTable from './components/OrdersTable';
+import Pagination from './components/Pagination';
+import OrderDetailsModal from './components/OrderDetailsModal';
+import OrderFormModal from './components/OrderFormModal';
+import { styles } from './styles';
 
-export default function ShippersPage() {
+export default function PaginaOrdenes() {
+  const {
+    ordenes,
+    loading,
+    error,
+    busqueda,
+    pagina,
+    totalPaginas,
+    setPagina,
+    handleBuscar,
+    handleEliminar,
+    crearOrden,
+    actualizarOrden,
+  } = useOrders();
+
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState(null); // para "ver detalles"
+  const [ordenEnEdicion, setOrdenEnEdicion] = useState(null); // null = creando, objeto = editando
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+
+  const handleVerDetalles = (orden) => setOrdenSeleccionada(orden);
+  const handleCerrarDetalles = () => setOrdenSeleccionada(null);
+
+  const handleAgregar = () => {
+    setOrdenEnEdicion(null);
+    setMostrarFormulario(true);
+  };
+
+  const handleEditar = (orden) => {
+    setOrdenEnEdicion(orden);
+    setMostrarFormulario(true);
+  };
+
+  const handleCerrarFormulario = () => {
+    setMostrarFormulario(false);
+    setOrdenEnEdicion(null);
+  };
+
+  const handleGuardar = async (payload) => {
+    if (ordenEnEdicion) {
+      await actualizarOrden(ordenEnEdicion.orderid, payload);
+    } else {
+      await crearOrden(payload);
+    }
+  };
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <h2>📋 Despacho y Monitoreo de Pedidos</h2>
-      <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '4px', background: '#fff' }}>
-        <h4>Orden #10248 (Cliente: VINET)</h4>
-        <p><strong>Fecha de Orden:</strong> 2026-06-16</p>
-        <p><strong>Dirección de Envío:</strong> Av. La Universidad 123 - Surco</p>
-        <label><strong>Asignar Courier (Tabla Shippers): </strong></label>
-        <select style={{ padding: '0.25rem', marginLeft: '0.5rem' }}>
-          <option>Speedy Express (ID: 1)</option>
-          <option>United Package (ID: 2)</option>
-          <option>Federal Shipping (ID: 3)</option>
-        </select>
-        <button style={{ marginLeft: '1rem', background: '#333', color: '#fff', border: 'none', padding: '0.3rem 0.6rem', cursor: 'pointer' }}>
-          Actualizar Estado
-        </button>
+    <div style={styles.page}>
+      <h1 style={styles.titulo}>Ordenes</h1>
+
+      <div style={styles.panel}>
+        <div style={styles.barraSuperior}>
+          <SearchBar
+            value={busqueda}
+            onChange={handleBuscar}
+            placeholder="Busca por nombre"
+            style={styles.buscador}
+          />
+          <button style={styles.botonAgregar} onClick={handleAgregar}>
+            Agregar
+          </button>
+        </div>
+
+        <OrdersTable
+          ordenes={ordenes}
+          loading={loading}
+          error={error}
+          onVerDetalles={handleVerDetalles}
+          onEditar={handleEditar}
+          onEliminar={handleEliminar}
+        />
+
+        <Pagination
+          pagina={pagina}
+          totalPaginas={totalPaginas}
+          onCambiarPagina={setPagina}
+        />
       </div>
+
+      {ordenSeleccionada && (
+        <OrderDetailsModal orden={ordenSeleccionada} onCerrar={handleCerrarDetalles} />
+      )}
+
+      {mostrarFormulario && (
+        <OrderFormModal
+          orden={ordenEnEdicion}
+          onGuardar={handleGuardar}
+          onCerrar={handleCerrarFormulario}
+        />
+      )}
     </div>
   );
 }
