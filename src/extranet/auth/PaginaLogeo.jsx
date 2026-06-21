@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   const [customerId, setCustomerId] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
     console.log("Intentando conectar con CustomerID de Northwind:", customerId);
     // Aquí irá tu fetch al backend (ej. SELECT * FROM Customers WHERE CustomerID = customerId)
+  
+    // Redirección directa a la intranet
+    navigate('/intranet');
   };
 
   return (

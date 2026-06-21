@@ -2,6 +2,7 @@
 import { Routes, Route } from 'react-router-dom';
 import ExtranetRoutes from '../extranet/routing/ExtranetRoutes';
 import IntranetRoutes from '../intranet/routing/IntranetRoutes';
+import LoginPage from '../extranet/auth/PaginaLogeo';
 
 export default function AppRoutes() {
   return (
@@ -12,6 +13,9 @@ export default function AppRoutes() {
 
       {/* 2. Cuando la URL empiece con "/intranet", delega el control a la Intranet */}
       <Route path="/intranet/*" element={<IntranetRoutes />} />
+
+      {/* 3. Cuando la URL sea "/login", va a la página de inicio de sesión */}
+      <Route path="/login" element={<LoginPage />} />
     </Routes>
   );
 }
