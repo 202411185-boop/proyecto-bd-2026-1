@@ -19,7 +19,7 @@ export default function LoginPage() {
       <h2> Iniciar Sesión - Retail</h2>
       <form onSubmit={handleLogin}>
         <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Código de Cliente (CustomerID):</label>
+          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Código de Usuario</label>
           <input 
             type="text" 
             value={customerId} 

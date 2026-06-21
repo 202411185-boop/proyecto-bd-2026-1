@@ -1,42 +1,123 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Nota: Ajusta la ruta de importación de tu cliente de Supabase según cómo lo haya configurado Favio
+import { supabase } from '../../lib/supabaseClient'; 
 
-export default function InventoryPage() {
-  // Simulación de filas de la tabla dbo.Products
-  const [products, setProducts] = useState([
-    { ProductID: 1, ProductName: 'Televisor Smart 55"', UnitPrice: 1899.00, UnitsInStock: 45 },
-    { ProductID: 2, ProductName: 'Arroz Integral 1kg', UnitPrice: 4.50, UnitsInStock: 250 }
-  ]);
+export default function PaginaProducto() {
+  const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // 1. Cargar las categorías para el filtro desplegable
+  useEffect(() => {
+    async function cargarCategorias() {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('categoryid, categoryname');
+        
+        if (error) throw error;
+        setCategorias(data || []);
+      } catch (error) {
+        console.error('Error cargando categorías:', error.message);
+      }
+    }
+    cargarCategorias();
+  }, []);
+
+  // 2. Cargar los datos de la Vista (View) solicitada por el informe
+  useEffect(() => {
+    async function cargarDetalleFacturacion() {
+      setLoading(true);
+      try {
+        // Consultamos directamente a la vista del backend
+        let query = supabase.from('view_detalle_facturacion_grupo1').select('*');
+
+        // Si el usuario seleccionó una categoría, filtramos (se asume que la vista expone el ID o puedes filtrar localmente)
+        if (categoriaSeleccionada) {
+          // Si tu vista  tiene alias en español 'id_categoria'
+          query = query.eq('id_categoria', categoriaSeleccionada);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        setProductos(data || []);
+      } catch (error) {
+        console.error('Error cargando la vista de facturación:', error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    cargarDetalleFacturacion();
+  }, [categoriaSeleccionada]);
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <h2>📦 Control de Productos (WMS)</h2>
-      <p>Gestión directa de la tabla <code>Products</code>.</p>
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h2 style={{ color: '#333' }}>Módulo de Productos - Detalle de Facturación</h2>
+      <p style={{ color: '#666' }}>Reporte consolidado de líneas de pedido y totales netos (Vista SQL del Grupo 1).</p>
       
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-        <thead>
-          <tr style={{ background: '#eee', textAlign: 'left' }}>
-            <th style={{ padding: '0.5rem' }}>ID</th>
-            <th style={{ padding: '0.5rem' }}>Producto</th>
-            <th style={{ padding: '0.5rem' }}>Precio Unitario</th>
-            <th style={{ padding: '0.5rem' }}>Stock Actual</th>
-            <th style={{ padding: '0.5rem' }}>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map(p => (
-            <tr key={p.ProductID} style={{ borderBottom: '1px solid #ddd' }}>
-              <td style={{ padding: '0.5rem' }}>{p.ProductID}</td>
-              <td style={{ padding: '0.5rem' }}>{p.ProductName}</td>
-              <td style={{ padding: '0.5rem' }}>S/. {p.UnitPrice.toFixed(2)}</td>
-              <td style={{ padding: '0.5rem' }}>{p.UnitsInStock} u.</td>
-              <td style={{ padding: '0.5rem' }}>
-                <button style={{ marginRight: '5px' }}>Editar</button>
-                <button style={{ color: 'red' }}>Eliminar</button>
-              </td>
-            </tr>
+      {/* Filtro por Categoría */}
+      <div style={{ marginBottom: '20px' }}>
+        <label htmlFor="categoria-select" style={{ marginRight: '10px', fontWeight: 'bold' }}>
+          Filtrar por Categoría:
+        </label>
+        <select
+          id="categoria-select"
+          value={categoriaSeleccionada}
+          onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+        >
+          <option value="">-- Todas las Categorías --</option>
+          {categorias.map((cat) => (
+            <option key={cat.categoryid} value={cat.categoryid}>
+              {cat.categoryname}
+            </option>
           ))}
-        </tbody>
-      </table>
+        </select>
+      </div>
+
+      {/* Tabla de Resultados */}
+      {loading ? (
+        <p>Cargando datos del servidor...</p>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f2f2f2', borderBottom: '2px solid #ddd', textAlign: 'left' }}>
+              <th style={{ padding: '12px' }}>Código Pedido</th>
+              <th style={{ padding: '12px' }}>ID Cliente</th>
+              <th style={{ padding: '12px' }}>Producto</th>
+              <th style={{ padding: '12px' }}>Precio Unitario</th>
+              <th style={{ padding: '12px' }}>Cantidad</th>
+              <th style={{ padding: '12px' }}>Descuento</th>
+              <th style={{ padding: '12px' }}>Total Neto Línea</th>
+            </tr>
+          </thead>
+          <tbody>
+            {productos.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ padding: '12px', textAlign: 'center', color: '#999' }}>
+                  No se encontraron registros.
+                </td>
+              </tr>
+            ) : (
+              productos.map((item, index) => (
+                <tr key={index} style={{ borderBottom: '1px solid #ddd' }}>
+                  <td style={{ padding: '12px' }}>{item.id_pedido}</td>
+                  <td style={{ padding: '12px' }}>{item.id_cliente}</td>
+                  <td style={{ padding: '12px' }}>{item.nombre_producto}</td>
+                  <td style={{ padding: '12px' }}>${Number(item.precio_unitario).toFixed(2)}</td>
+                  <td style={{ padding: '12px' }}>{item.cantidad}</td>
+                  <td style={{ padding: '12px' }}>{item.descuento}%</td>
+                  <td style={{ padding: '12px', fontWeight: 'bold', color: '#2e7d32' }}>
+                    ${Number(item.total_neto).toFixed(2)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
