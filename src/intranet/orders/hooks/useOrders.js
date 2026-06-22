@@ -5,14 +5,9 @@ import { PAGE_SIZE } from '../styles';
 // ───────────────────────────────────────────────
 // Hook: useOrders
 // Centraliza toda la comunicación con Supabase para
-// el módulo de Órdenes (lectura con datos relacionados
-// de cliente/empleado/transportista, búsqueda,
-// paginación y borrado).
-//
-// IMPORTANTE: los nombres de columnas reales en Supabase
-// son los de Northwind, en inglés (orderid, customerid,
-// employeeid, orderdate, shipperid, companyname, etc).
-// El español se usa solo en la interfaz visual.
+// el módulo de Órdenes: lectura (con nombre de cliente),
+// búsqueda por customerid, paginación, creación y
+// borrado en cascada (orderdetails + orders).
 // ───────────────────────────────────────────────
 export function useOrders() {
   const [ordenes, setOrdenes] = useState([]);
@@ -32,12 +27,6 @@ export function useOrders() {
     const desde = pagina * PAGE_SIZE;
     const hasta = desde + PAGE_SIZE - 1;
 
-    // Por ahora solo se traen los IDs planos de la orden
-    // (sin nombre de cliente/empleado/transportista), ya
-    // que esas tablas relacionadas todavía no están
-    // confirmadas. Cuando se confirmen los nombres reales
-    // de columna en customers/employees/shippers, se puede
-    // volver a agregar el join anidado aquí.
     let query = supabase
       .from('orders')
       .select(
@@ -46,7 +35,8 @@ export function useOrders() {
         customerid,
         employeeid,
         orderdate,
-        shipperid
+        shipperid,
+        customers ( customername )
       `,
         { count: 'exact' }
       )
@@ -54,14 +44,16 @@ export function useOrders() {
       .range(desde, hasta);
 
     if (busqueda.trim() !== '') {
-      // Busca por id de orden directamente (numérico).
+      // Búsqueda por ID de cliente (customerid).
       const texto = busqueda.trim();
       if (!Number.isNaN(Number(texto))) {
-        query = query.eq('orderid', Number(texto));
+        query = query.eq('customerid', Number(texto));
+      } else {
+        // Si no es numérico, no se aplica filtro: customerid
+        // es numérico, así que un texto no numérico no puede
+        // coincidir con ningún registro.
+        query = query.eq('customerid', -1);
       }
-      // Si el texto no es numérico, no se aplica filtro:
-      // todavía no hay columna de texto en 'orders' para
-      // buscar por nombre.
     }
 
     const { data, error, count } = await query;
@@ -87,10 +79,25 @@ export function useOrders() {
 
   const handleEliminar = async (orderid) => {
     const confirmar = window.confirm(
-      `¿Eliminar la orden #${orderid}? Esta acción no se puede deshacer.`
+      `¿Eliminar la orden #${orderid}? Esto también eliminará todos los ` +
+        `productos asociados a este pedido. Esta acción no se puede deshacer.`
     );
     if (!confirmar) return;
 
+    // 1. Borra primero las líneas de orderdetails asociadas,
+    //    porque la foreign key no permite borrar la orden
+    //    mientras todavía tenga "hijos" en orderdetails.
+    const { error: errorDetalles } = await supabase
+      .from('orderdetails')
+      .delete()
+      .eq('orderid', orderid);
+
+    if (errorDetalles) {
+      alert(`No se pudo eliminar el detalle del pedido: ${errorDetalles.message}`);
+      return;
+    }
+
+    // 2. Ya sin hijos, se borra la orden con seguridad.
     const { error } = await supabase.from('orders').delete().eq('orderid', orderid);
 
     if (error) {
@@ -98,27 +105,11 @@ export function useOrders() {
       return;
     }
 
-    // Si era el último de la página y no es la primera, retrocede una página
     if (ordenes.length === 1 && pagina > 0) {
       setPagina((p) => p - 1);
     } else {
       cargarOrdenes();
     }
-  };
-
-  const crearOrden = async (payload) => {
-    const { error } = await supabase.from('orders').insert([payload]);
-    if (error) throw error;
-    await cargarOrdenes();
-  };
-
-  const actualizarOrden = async (orderid, payload) => {
-    const { error } = await supabase
-      .from('orders')
-      .update(payload)
-      .eq('orderid', orderid);
-    if (error) throw error;
-    await cargarOrdenes();
   };
 
   return {
@@ -131,8 +122,6 @@ export function useOrders() {
     setPagina,
     handleBuscar,
     handleEliminar,
-    crearOrden,
-    actualizarOrden,
     recargar: cargarOrdenes,
   };
 }
