@@ -6,7 +6,7 @@ import { PAGE_SIZE } from '../styles';
 // Hook: useSuppliers
 // Centraliza toda la comunicación con Supabase para
 // el módulo de Proveedores (lectura, búsqueda,
-// paginación y borrado).
+// paginación, creación, edición y borrado).
 // ───────────────────────────────────────────────
 export function useSuppliers() {
   const [proveedores, setProveedores] = useState([]);
@@ -81,6 +81,58 @@ export function useSuppliers() {
     }
   };
 
+  // Crea o actualiza un proveedor.
+  // Si `datos.supplierid` viene definido, actualiza; si no, inserta uno nuevo.
+  // Devuelve { ok: true } o { ok: false, message } para que el modal muestre el error.
+  const handleGuardar = async (datos) => {
+    const payload = {
+      suppliername: datos.suppliername,
+      contactname: datos.contactname || null,
+      address: datos.address || null,
+      city: datos.city || null,
+      postalcode: datos.postalcode || null,
+      country: datos.country || null,
+      phone: datos.phone || null,
+    };
+
+    try {
+      if (datos.supplierid) {
+        // Editar existente
+        const { error } = await supabase
+          .from('suppliers')
+          .update(payload)
+          .eq('supplierid', datos.supplierid);
+
+        if (error) throw error;
+      } else {
+        // Crear nuevo: calculamos el siguiente ID manualmente por si la
+        // secuencia autoincremental de la tabla está desincronizada
+        // (esto evita errores de "duplicate key value")
+        const { data: maxRow, error: errMax } = await supabase
+          .from('suppliers')
+          .select('supplierid')
+          .order('supplierid', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (errMax) throw errMax;
+
+        const siguienteId = (maxRow?.supplierid || 0) + 1;
+
+        const { error } = await supabase
+          .from('suppliers')
+          .insert([{ supplierid: siguienteId, ...payload }]);
+
+        if (error) throw error;
+      }
+
+      cargarProveedores();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, message: err.message };
+    }
+  };
+
   return {
     proveedores,
     loading,
@@ -91,5 +143,6 @@ export function useSuppliers() {
     setPagina,
     handleBuscar,
     handleEliminar,
+    handleGuardar,
   };
 }

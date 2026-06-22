@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSuppliers } from './hooks/useSuppliers';
 import SearchBar from './components/SearchBar';
 import SuppliersTable from './components/SuppliersTable';
 import Pagination from './components/Pagination';
+import SupplierModal from './components/SupplierModal';
 import { styles } from './styles';
 
 export default function PaginaProveedor() {
@@ -16,16 +17,26 @@ export default function PaginaProveedor() {
     setPagina,
     handleBuscar,
     handleEliminar,
+    handleGuardar,
   } = useSuppliers();
 
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [proveedorEditando, setProveedorEditando] = useState(null); // null = modo "nuevo"
+
   const handleEditar = (supplierid) => {
-    // TODO: conectar a modal o ruta de edición cuando esté lista
-    console.log('Editar proveedor', supplierid);
+    const proveedor = proveedores.find((p) => p.supplierid === supplierid);
+    setProveedorEditando(proveedor || null);
+    setModalAbierto(true);
   };
 
   const handleAgregar = () => {
-    // TODO: conectar a modal o ruta de creación cuando esté lista
-    console.log('Agregar nuevo proveedor');
+    setProveedorEditando(null);
+    setModalAbierto(true);
+  };
+
+  const cerrarModal = () => {
+    setModalAbierto(false);
+    setProveedorEditando(null);
   };
 
   return (
@@ -59,6 +70,14 @@ export default function PaginaProveedor() {
           onCambiarPagina={setPagina}
         />
       </div>
+
+      {modalAbierto && (
+        <SupplierModal
+          proveedor={proveedorEditando}
+          onGuardar={handleGuardar}
+          onCerrar={cerrarModal}
+        />
+      )}
     </div>
   );
 }
