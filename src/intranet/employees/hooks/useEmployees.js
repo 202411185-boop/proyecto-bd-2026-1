@@ -99,3 +99,46 @@ export function useEmployees() {
     handleEliminar,
   };
 }
+
+// ───────────────────────────────────────────────────────────────
+// NUEVO Hook: useEmployeesReport
+// Consulta la vista analítica temporal de ventas realizadas
+// por los empleados desglosado de forma mensual y anual.
+// Vista: view_ventas_empleado_temporal_grupo1
+// ───────────────────────────────────────────────────────────────
+export function useEmployeesReport() {
+  const [datosVentas, setDatosVentas] = useState([]);
+  const [cargandoVentas, setCargandoVentas] = useState(true);
+  const [errorVentas, setErrorVentas] = useState(null);
+
+  useEffect(() => {
+    async function obtenerReporte() {
+      try {
+        setCargandoVentas(true);
+        setErrorVentas(null);
+        
+        const { data, error } = await supabase
+          .from('view_ventas_empleado_temporal') // Conexión a la vista
+          .select('*')
+          .order('anio', { ascending: false })         // Ordenación temporal
+          .order('mes', { ascending: false })
+          .order('id_empleado', { ascending: true });  // Orden consecutivo por ID
+
+        if (error) throw error;
+        setDatosVentas(data || []);
+      } catch (err) {
+        setErrorVentas(err.message);
+      } finally {
+        setCargandoVentas(false);
+      }
+    }
+    
+    obtenerReporte();
+  }, []);
+
+  return {
+    datosVentas,
+    cargandoVentas,
+    errorVentas,
+  };
+}

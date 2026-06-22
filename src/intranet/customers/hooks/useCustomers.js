@@ -109,7 +109,7 @@ export function useCustomersReport() {
         const { data, error } = await supabase
           .from('view_ventas_por_cliente_grupo1') // Conexión directa a la vista
           .select('*')
-          .order('total_ventas', { ascending: false }); // Mayor a menor venta
+          .order('id_cliente', { ascending: true }); // Mayor a menor venta
 
         if (error) throw error;
         setDatosVentas(data || []);
