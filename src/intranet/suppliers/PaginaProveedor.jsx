@@ -3,6 +3,7 @@ import { useSuppliers } from './hooks/useSuppliers';
 import SearchBar from './components/SearchBar';
 import SuppliersTable from './components/SuppliersTable';
 import Pagination from './components/Pagination';
+import ProveedorModal from './components/ProveedorModal';
 import { styles } from './styles';
 
 export default function PaginaProveedor() {
@@ -16,17 +17,13 @@ export default function PaginaProveedor() {
     setPagina,
     handleBuscar,
     handleEliminar,
+    handleEditar,
+    handleAbrirAgregar,
+    handleCerrarModal,
+    handleGuardar,
+    modalConfig,
+    guardando,
   } = useSuppliers();
-
-  const handleEditar = (supplierid) => {
-    // TODO: conectar a modal o ruta de edición cuando esté lista
-    console.log('Editar proveedor', supplierid);
-  };
-
-  const handleAgregar = () => {
-    // TODO: conectar a modal o ruta de creación cuando esté lista
-    console.log('Agregar nuevo proveedor');
-  };
 
   return (
     <div style={styles.page}>
@@ -40,7 +37,7 @@ export default function PaginaProveedor() {
             placeholder="Busca por nombre"
             style={styles.buscador}
           />
-          <button style={styles.botonAgregar} onClick={handleAgregar}>
+          <button style={styles.botonAgregar} onClick={handleAbrirAgregar}>
             Agregar
           </button>
         </div>
@@ -59,6 +56,16 @@ export default function PaginaProveedor() {
           onCambiarPagina={setPagina}
         />
       </div>
+
+      {modalConfig && (
+        <ProveedorModal
+          modo={modalConfig.modo}
+          proveedor={modalConfig.proveedor}
+          onGuardar={handleGuardar}
+          onCerrar={handleCerrarModal}
+          guardando={guardando}
+        />
+      )}
     </div>
   );
 }

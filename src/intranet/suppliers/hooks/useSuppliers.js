@@ -2,12 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { PAGE_SIZE } from '../styles';
 
-// ───────────────────────────────────────────────
-// Hook: useSuppliers
-// Centraliza toda la comunicación con Supabase para
-// el módulo de Proveedores (lectura, búsqueda,
-// paginación y borrado).
-// ───────────────────────────────────────────────
 export function useSuppliers() {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +10,9 @@ export function useSuppliers() {
   const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(0);
   const [totalFilas, setTotalFilas] = useState(0);
+
+  const [modalConfig, setModalConfig] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
   const totalPaginas = Math.max(1, Math.ceil(totalFilas / PAGE_SIZE));
 
@@ -57,9 +54,10 @@ export function useSuppliers() {
     setPagina(0);
   };
 
+  // ── ELIMINAR ──────────────────────────────────────
   const handleEliminar = async (supplierid, suppliername) => {
     const confirmar = window.confirm(
-      `¿Eliminar al proveedor "${suppliername}"? Esta acción no se puede deshacer.`
+      `¿Eliminar al proveedor "${suppliername}"?\nEsta acción no se puede deshacer.`
     );
     if (!confirmar) return;
 
@@ -73,12 +71,68 @@ export function useSuppliers() {
       return;
     }
 
-    // Si era el último de la página y no es la primera, retrocede una página
     if (proveedores.length === 1 && pagina > 0) {
       setPagina((p) => p - 1);
     } else {
       cargarProveedores();
     }
+  };
+
+  // ── ABRIR MODAL EDITAR ────────────────────────────
+  const handleEditar = async (supplierid) => {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .select('*')
+      .eq('supplierid', supplierid)
+      .single();
+
+    if (error) {
+      alert(`No se pudo cargar el proveedor: ${error.message}`);
+      return;
+    }
+    setModalConfig({ modo: 'editar', proveedor: data });
+  };
+
+  // ── ABRIR MODAL AGREGAR ───────────────────────────
+  const handleAbrirAgregar = () => {
+    setModalConfig({ modo: 'agregar', proveedor: null });
+  };
+
+  // ── CERRAR MODAL ──────────────────────────────────
+  const handleCerrarModal = () => {
+    setModalConfig(null);
+  };
+
+  // ── GUARDAR (crear o actualizar) ──────────────────
+  const handleGuardar = async (payload) => {
+    setGuardando(true);
+
+    if (modalConfig?.modo === 'editar') {
+      const { error } = await supabase
+        .from('suppliers')
+        .update(payload)
+        .eq('supplierid', modalConfig.proveedor.supplierid);
+
+      if (error) {
+        alert(`No se pudo actualizar: ${error.message}`);
+        setGuardando(false);
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from('suppliers')
+        .insert([payload]);
+
+      if (error) {
+        alert(`No se pudo agregar: ${error.message}`);
+        setGuardando(false);
+        return;
+      }
+    }
+
+    setGuardando(false);
+    setModalConfig(null);
+    cargarProveedores();
   };
 
   return {
@@ -91,5 +145,11 @@ export function useSuppliers() {
     setPagina,
     handleBuscar,
     handleEliminar,
+    handleEditar,
+    handleAbrirAgregar,
+    handleCerrarModal,
+    handleGuardar,
+    modalConfig,
+    guardando,
   };
 }

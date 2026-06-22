@@ -2,38 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { COLORS } from '../styles';
 
 const CAMPOS = [
-  { key: 'lastname',  label: 'Apellido',            type: 'text',     required: true  },
-  { key: 'firstname', label: 'Primer nombre',        type: 'text',     required: true  },
-  { key: 'birthdate', label: 'Fecha de nacimiento',  type: 'date',     required: false },
-  { key: 'notes',     label: 'Notas',                type: 'textarea', required: false },
+  { key: 'suppliername', label: 'Nombre del proveedor', type: 'text', required: true  },
+  { key: 'contactname',  label: 'Nombre de contacto',   type: 'text', required: false },
+  { key: 'address',      label: 'Dirección',             type: 'text', required: false },
+  { key: 'city',         label: 'Ciudad',                type: 'text', required: false },
+  { key: 'postalcode',   label: 'Código postal',         type: 'text', required: false },
+  { key: 'country',      label: 'País',                  type: 'text', required: false },
+  { key: 'phone',        label: 'Teléfono',              type: 'text', required: false },
 ];
 
 const VACÍO = Object.fromEntries(CAMPOS.map(c => [c.key, '']));
 
-function formatearParaInput(empleado) {
+function formatearParaInput(proveedor) {
   const obj = { ...VACÍO };
-  CAMPOS.forEach(({ key, type }) => {
-    const val = empleado?.[key];
-    if (val === null || val === undefined) {
-      obj[key] = '';
-    } else if (type === 'date' && val) {
-      obj[key] = String(val).slice(0, 10);
-    } else {
-      obj[key] = String(val);
-    }
+  CAMPOS.forEach(({ key }) => {
+    const val = proveedor?.[key];
+    obj[key] = (val === null || val === undefined) ? '' : String(val);
   });
   return obj;
 }
 
-export default function EmpleadoModal({ modo, empleado, onGuardar, onCerrar, guardando }) {
+export default function ProveedorModal({ modo, proveedor, onGuardar, onCerrar, guardando }) {
   const esEdicion = modo === 'editar';
   const [form, setForm] = useState(VACÍO);
   const [errores, setErrores] = useState({});
 
   useEffect(() => {
-    setForm(esEdicion && empleado ? formatearParaInput(empleado) : { ...VACÍO });
+    setForm(esEdicion && proveedor ? formatearParaInput(proveedor) : { ...VACÍO });
     setErrores({});
-  }, [empleado, esEdicion]);
+  }, [proveedor, esEdicion]);
 
   const handleChange = (key, valor) => {
     setForm(prev => ({ ...prev, [key]: valor }));
@@ -69,7 +66,7 @@ export default function EmpleadoModal({ modo, empleado, onGuardar, onCerrar, gua
     caja: {
       background: '#fff',
       borderRadius: '10px',
-      width: '90%', maxWidth: '480px',
+      width: '90%', maxWidth: '520px',
       boxShadow: '0 6px 28px rgba(0,0,0,0.3)',
       fontFamily: "'Segoe UI', Arial, sans-serif",
     },
@@ -87,32 +84,19 @@ export default function EmpleadoModal({ modo, empleado, onGuardar, onCerrar, gua
       fontWeight: 700, fontSize: '1rem',
     },
     cuerpo: { padding: '1.4rem', display: 'flex', flexDirection: 'column', gap: '1rem' },
-    label: {
-      display: 'block', fontSize: '0.78rem',
-      fontWeight: 600, color: '#555', marginBottom: '0.3rem',
-    },
+    label: { display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#555', marginBottom: '0.3rem' },
     labelReq: { color: COLORS.delete },
     input: {
       width: '100%', boxSizing: 'border-box',
-      padding: '0.5rem 0.7rem',
-      borderRadius: '5px', fontSize: '0.88rem',
-      border: '1px solid #ccc', outline: 'none',
-      fontFamily: 'inherit',
+      padding: '0.5rem 0.7rem', borderRadius: '5px',
+      fontSize: '0.88rem', border: '1px solid #ccc',
+      outline: 'none', fontFamily: 'inherit',
     },
     inputError: { border: `1px solid ${COLORS.delete}` },
-    textarea: {
-      width: '100%', boxSizing: 'border-box',
-      padding: '0.5rem 0.7rem',
-      borderRadius: '5px', fontSize: '0.88rem',
-      border: '1px solid #ccc', outline: 'none',
-      fontFamily: 'inherit', resize: 'vertical',
-      minHeight: '100px',
-    },
     msgError: { color: COLORS.delete, fontSize: '0.72rem', marginTop: '0.2rem' },
     footer: {
       display: 'flex', justifyContent: 'flex-end', gap: '0.8rem',
-      padding: '1rem 1.4rem',
-      borderTop: '1px solid #eee',
+      padding: '1rem 1.4rem', borderTop: '1px solid #eee',
     },
     btnCancelar: {
       background: '#888', color: '#fff', border: 'none',
@@ -131,17 +115,15 @@ export default function EmpleadoModal({ modo, empleado, onGuardar, onCerrar, gua
   return (
     <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onCerrar()}>
       <div style={s.caja}>
-        {/* Header */}
         <div style={s.header}>
           <h2 style={s.headerTitulo}>
             {esEdicion
-              ? `✏️  Editar empleado #${empleado?.employeeid}`
-              : '➕  Agregar nuevo empleado'}
+              ? `✏️  Editar proveedor #${proveedor?.supplierid}`
+              : '➕  Agregar nuevo proveedor'}
           </h2>
           <button style={s.btnCerrar} onClick={onCerrar}>✕</button>
         </div>
 
-        {/* Cuerpo */}
         <div style={s.cuerpo}>
           {CAMPOS.map(({ key, label, type, required }) => (
             <div key={key}>
@@ -149,34 +131,24 @@ export default function EmpleadoModal({ modo, empleado, onGuardar, onCerrar, gua
                 {label}
                 {required && <span style={s.labelReq}> *</span>}
               </label>
-              {type === 'textarea' ? (
-                <textarea
-                  style={{ ...s.textarea, ...(errores[key] ? s.inputError : {}) }}
-                  value={form[key]}
-                  onChange={e => handleChange(key, e.target.value)}
-                  placeholder={label}
-                />
-              ) : (
-                <input
-                  style={{ ...s.input, ...(errores[key] ? s.inputError : {}) }}
-                  type={type}
-                  value={form[key]}
-                  onChange={e => handleChange(key, e.target.value)}
-                  placeholder={type !== 'date' ? label : ''}
-                />
-              )}
+              <input
+                style={{ ...s.input, ...(errores[key] ? s.inputError : {}) }}
+                type={type}
+                value={form[key]}
+                onChange={e => handleChange(key, e.target.value)}
+                placeholder={label}
+              />
               {errores[key] && <div style={s.msgError}>{errores[key]}</div>}
             </div>
           ))}
         </div>
 
-        {/* Footer */}
         <div style={s.footer}>
           <button style={s.btnCancelar} onClick={onCerrar} disabled={guardando}>
             Cancelar
           </button>
           <button style={s.btnGuardar} onClick={handleSubmit} disabled={guardando}>
-            {guardando ? 'Guardando…' : esEdicion ? 'Guardar cambios' : 'Agregar empleado'}
+            {guardando ? 'Guardando…' : esEdicion ? 'Guardar cambios' : 'Agregar proveedor'}
           </button>
         </div>
       </div>

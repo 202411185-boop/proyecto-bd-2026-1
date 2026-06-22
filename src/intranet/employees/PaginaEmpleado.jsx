@@ -1,9 +1,9 @@
-import React,{ useState} from 'react';
-//importamos los hooks base y el nuevo reporte analítico
+import React, { useState } from 'react';
 import { useEmployees, useEmployeesReport } from './hooks/useEmployees';
 import SearchBar from './components/SearchBar';
 import EmployeesTable from './components/EmployeesTable';
 import Pagination from './components/Pagination';
+import EmpleadoModal from './components/EmpleadoModal';
 import { styles } from './styles';
 
 export default function PaginaEmpleado() {
@@ -17,20 +17,16 @@ export default function PaginaEmpleado() {
     setPagina,
     handleBuscar,
     handleEliminar,
+    handleEditar,
+    handleAbrirAgregar,
+    handleCerrarModal,
+    handleGuardar,
+    modalConfig,
+    guardando,
   } = useEmployees();
 
-// Estado para controlar la apertura de la subinterfaz
-  const [mostrarModal, setMostrarModal] = useState(false);
-
-  const handleEditar = (employeeid) => {
-    // TODO: conectar a modal o ruta de edición cuando esté lista
-    console.log('Editar empleado', employeeid);
-  };
-
-  const handleAgregar = () => {
-    // TODO: conectar a modal o ruta de creación cuando esté lista
-    console.log('Agregar nuevo empleado');
-  };
+  // Estado para el modal de Reporte de Ventas
+  const [mostrarReporte, setMostrarReporte] = useState(false);
 
   return (
     <div style={styles.page}>
@@ -45,16 +41,15 @@ export default function PaginaEmpleado() {
             style={styles.buscador}
           />
 
-          {/* Contenedor horizontal para tus dos botones */}
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              style={{ ...styles.botonAgregar, backgroundColor: '#2e7d32' }} 
-              onClick={() => setMostrarModal(true)}
+            <button
+              style={{ ...styles.botonAgregar, backgroundColor: '#2e7d32' }}
+              onClick={() => setMostrarReporte(true)}
             >
               Reporte Ventas
             </button>
 
-            <button style={styles.botonAgregar} onClick={handleAgregar}>
+            <button style={styles.botonAgregar} onClick={handleAbrirAgregar}>
               Agregar
             </button>
           </div>
@@ -75,11 +70,21 @@ export default function PaginaEmpleado() {
         />
       </div>
 
-       {/* RENDERIZADO CONDICIONAL DE LA SUBINTERFAZ */}
-      {mostrarModal && (
-        <SubinterfazVentasEmpleados onClose={() => setMostrarModal(false)} />
+      {/* Modal Agregar / Editar empleado */}
+      {modalConfig && (
+        <EmpleadoModal
+          modo={modalConfig.modo}
+          empleado={modalConfig.empleado}
+          onGuardar={handleGuardar}
+          onCerrar={handleCerrarModal}
+          guardando={guardando}
+        />
       )}
 
+      {/* Modal Reporte de Ventas */}
+      {mostrarReporte && (
+        <SubinterfazVentasEmpleados onClose={() => setMostrarReporte(false)} />
+      )}
     </div>
   );
 }
@@ -88,7 +93,6 @@ export default function PaginaEmpleado() {
 // SUBCOMPONENTE: SubinterfazVentasEmpleados (Modal de la Vista SQL)
 // ──────────────────────────────────────────────────────────────────
 function SubinterfazVentasEmpleados({ onClose }) {
-  // Consumimos los datos de la vista temporal filtrada desde el hook
   const { datosVentas, cargandoVentas, errorVentas } = useEmployeesReport();
 
   return (
@@ -112,18 +116,16 @@ function SubinterfazVentasEmpleados({ onClose }) {
         boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
         fontFamily: 'sans-serif'
       }}>
-        {/* Cabecera del Reporte */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
           <h2 style={{ color: '#2e7d32', margin: 0 }}>Reporte Temporal: Ventas por Empleado</h2>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             style={{ backgroundColor: '#d32f2f', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
           >
             Cerrar ✕
           </button>
         </div>
 
-        {/* Listado de la Tabla Analítica */}
         {cargandoVentas ? (
           <p style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Cargando datos históricos...</p>
         ) : errorVentas ? (

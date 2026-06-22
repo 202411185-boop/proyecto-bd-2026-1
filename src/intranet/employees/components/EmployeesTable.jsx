@@ -1,7 +1,6 @@
 import React from 'react';
 import { COLORS, styles } from '../styles';
 
-// Formatea la fecha de Supabase (YYYY-MM-DD o timestamp) a dd/mm/aaaa
 function formatearFecha(fecha) {
   if (!fecha) return '—';
   const d = new Date(fecha);
@@ -25,19 +24,18 @@ export default function EmployeesTable({
       <table style={styles.tabla}>
         <thead>
           <tr>
-            <th style={styles.th}>id</th>
+            <th style={styles.th}>ID</th>
             <th style={styles.th}>Apellido</th>
             <th style={styles.th}>Primer nombre</th>
-            <th style={styles.th}>Fecha de cumpleaños</th>
-            <th style={styles.th}>Foto</th>
-            <th style={styles.th}>Nota</th>
+            <th style={styles.th}>Fecha de nacimiento</th>
+            <th style={styles.th}>Notas</th>
             <th style={styles.th}>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {loading && (
             <tr>
-              <td style={styles.tdMensaje} colSpan={7}>
+              <td style={styles.tdMensaje} colSpan={6}>
                 Cargando empleados...
               </td>
             </tr>
@@ -45,7 +43,7 @@ export default function EmployeesTable({
 
           {!loading && error && (
             <tr>
-              <td style={{ ...styles.tdMensaje, color: COLORS.delete }} colSpan={7}>
+              <td style={{ ...styles.tdMensaje, color: COLORS.delete }} colSpan={6}>
                 Error al cargar: {error}
               </td>
             </tr>
@@ -53,7 +51,7 @@ export default function EmployeesTable({
 
           {!loading && !error && empleados.length === 0 && (
             <tr>
-              <td style={styles.tdMensaje} colSpan={7}>
+              <td style={styles.tdMensaje} colSpan={6}>
                 No se encontraron empleados.
               </td>
             </tr>
@@ -74,9 +72,6 @@ export default function EmployeesTable({
                   <td style={styles.td}>{e.lastname}</td>
                   <td style={styles.td}>{e.firstname}</td>
                   <td style={styles.td}>{formatearFecha(e.birthdate)}</td>
-                  <td style={{ ...styles.td, ...styles.fotoCelda }}>
-                    {e.photo || '—'}
-                  </td>
                   <td style={{ ...styles.td, ...styles.notaCelda }}>
                     {e.notes || '—'}
                   </td>
