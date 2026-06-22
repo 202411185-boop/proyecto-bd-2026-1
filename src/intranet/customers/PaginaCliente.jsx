@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-// IMPORTANTE: Ahora importamos ambos hooks para que la subinterfaz tenga datos
 import { useCustomers, useCustomersReport } from './hooks/useCustomers';
 import SearchBar from './components/SearchBar';
 import CustomersTable from './components/CustomersTable';
 import Pagination from './components/Pagination';
+import EditClienteModal from './components/EditClienteModal';
 import { styles } from './styles';
 
 export default function PaginaCliente() {
@@ -16,18 +16,19 @@ export default function PaginaCliente() {
     totalPaginas,
     setPagina,
     handleBuscar,
+    handleActualizar,
     handleEliminar,
   } = useCustomers();
 
-  // Estado para controlar si el reporte flotante se abre o se cierra
+  // Modal: Vista por Cliente (reporte de ventas)
   const [mostrarModal, setMostrarModal] = useState(false);
 
-  const handleEditar = (customerid) => {
-    console.log('Editar cliente', customerid);
-  };
+  // Modal: Editar cliente
+  const [clienteEditando, setClienteEditando] = useState(null);
 
-  const handleAgregar = () => {
-    console.log('Agregar nuevo cliente');
+  const handleEditar = (customerid) => {
+    const cliente = clientes.find((c) => c.customerid === customerid);
+    if (cliente) setClienteEditando(cliente);
   };
 
   return (
@@ -42,20 +43,14 @@ export default function PaginaCliente() {
             placeholder="Busca por nombre"
             style={styles.buscador}
           />
-          
-          {/* Contenedor horizontal para tus dos botones */}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              style={{ ...styles.botonAgregar, backgroundColor: '#2e7d32' }} 
-              onClick={() => setMostrarModal(true)}
-            >
-            Vista por Cliente
-            </button>
 
-            <button style={styles.botonAgregar} onClick={handleAgregar}>
-              Agregar
-            </button>
-          </div>
+          {/* Solo queda el botón "Vista por Cliente" — se eliminó "Agregar" */}
+          <button
+            style={{ ...styles.botonAgregar, backgroundColor: '#2e7d32' }}
+            onClick={() => setMostrarModal(true)}
+          >
+            Vista por Cliente
+          </button>
         </div>
 
         <CustomersTable
@@ -73,30 +68,38 @@ export default function PaginaCliente() {
         />
       </div>
 
-      {/* RENDERIZADO DEL MODAL REAL */}
+      {/* Modal: Reporte de ventas por cliente */}
       {mostrarModal && (
         <SubinterfazVentasClientes onClose={() => setMostrarModal(false)} />
+      )}
+
+      {/* Modal: Editar dirección y ciudad */}
+      {clienteEditando && (
+        <EditClienteModal
+          cliente={clienteEditando}
+          onGuardar={handleActualizar}
+          onCerrar={() => setClienteEditando(null)}
+        />
       )}
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────
-// SUBCOMPONENTE: SubinterfazVentasClientes (Modal Flotante Real)
+// SUBCOMPONENTE: SubinterfazVentasClientes (sin cambios)
 // ──────────────────────────────────────────────────────────────────
 function SubinterfazVentasClientes({ onClose }) {
-  // Aquí es donde consumimos los datos que vienen directo de Supabase
   const { datosVentas, cargandoVentas, errorVentas } = useCustomersReport();
 
   return (
     <div style={{
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'rgba(0,0,0,0.5)',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      zIndex: 1000
+      zIndex: 1000,
     }}>
       <div style={{
         backgroundColor: 'white',
@@ -107,20 +110,18 @@ function SubinterfazVentasClientes({ onClose }) {
         maxHeight: '80vh',
         overflowY: 'auto',
         boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
-        fontFamily: 'sans-serif'
+        fontFamily: 'sans-serif',
       }}>
-        {/* Cabecera del modal */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
           <h2 style={{ color: '#2e7d32', margin: 0 }}>📊 Reporte Consolidador: Ventas por Cliente</h2>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             style={{ backgroundColor: '#d32f2f', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
           >
             Cerrar ✕
           </button>
         </div>
 
-        {/* Cambios de estados dinámicos */}
         {cargandoVentas ? (
           <p style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Cargando reporte de ventas...</p>
         ) : errorVentas ? (
