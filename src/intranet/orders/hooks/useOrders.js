@@ -2,13 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { PAGE_SIZE } from '../styles';
 
-// ───────────────────────────────────────────────
-// Hook: useOrders
-// Centraliza toda la comunicación con Supabase para
-// el módulo de Órdenes: lectura (con nombre de cliente),
-// búsqueda por customerid, paginación, creación y
-// borrado en cascada (orderdetails + orders).
-// ───────────────────────────────────────────────
 export function useOrders() {
   const [ordenes, setOrdenes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +10,10 @@ export function useOrders() {
   const [busqueda, setBusqueda] = useState('');
   const [pagina, setPagina] = useState(0);
   const [totalFilas, setTotalFilas] = useState(0);
+
+  const [historial, setHistorial] = useState([]);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
+  const [errorHistorial, setErrorHistorial] = useState(null);
 
   const totalPaginas = Math.max(1, Math.ceil(totalFilas / PAGE_SIZE));
 
@@ -30,34 +27,21 @@ export function useOrders() {
     let query = supabase
       .from('orders')
       .select(
-        `
-        orderid,
-        customerid,
-        employeeid,
-        orderdate,
-        shipperid,
-        customers ( customername )
-      `,
+        `orderid, customerid, employeeid, orderdate, shipperid,
+         customers ( customername )`,
         { count: 'exact' }
       )
       .order('orderid', { ascending: true })
       .range(desde, hasta);
 
     if (busqueda.trim() !== '') {
-      // Búsqueda por ID de cliente (customerid).
       const texto = busqueda.trim();
-      if (!Number.isNaN(Number(texto))) {
-        query = query.eq('customerid', Number(texto));
-      } else {
-        // Si no es numérico, no se aplica filtro: customerid
-        // es numérico, así que un texto no numérico no puede
-        // coincidir con ningún registro.
-        query = query.eq('customerid', -1);
-      }
+      query = !Number.isNaN(Number(texto))
+        ? query.eq('customerid', Number(texto))
+        : query.eq('customerid', -1);
     }
 
     const { data, error, count } = await query;
-
     if (error) {
       setError(error.message);
       setOrdenes([]);
@@ -68,60 +52,74 @@ export function useOrders() {
     setLoading(false);
   }, [pagina, busqueda]);
 
-  useEffect(() => {
-    cargarOrdenes();
-  }, [cargarOrdenes]);
+  useEffect(() => { cargarOrdenes(); }, [cargarOrdenes]);
 
-  const handleBuscar = (texto) => {
-    setBusqueda(texto);
-    setPagina(0);
+  const handleBuscar = (texto) => { setBusqueda(texto); setPagina(0); };
+
+  // ── SP 1: sp_registrar_pedido (ahora es FUNCTION, no PROCEDURE) ──────────
+  // Los parámetros se pasan con el nombre exacto declarado en el SQL,
+  // en el mismo orden. Supabase los mapea por nombre, no por posición.
+  const handleCrearPedido = async ({ customerid, employeeid, shipperid, orderdate, detalles }) => {
+    const { data, error } = await supabase.rpc('sp_registrar_pedido', {
+      p_customerid: Number(customerid),
+      p_employeeid: employeeid ? Number(employeeid) : null,
+      p_orderdate:  orderdate ? new Date(orderdate).toISOString() : new Date().toISOString(),
+      p_shipperid:  shipperid ? Number(shipperid) : null,
+      p_productos:  detalles,
+    });
+
+    if (error) throw new Error(error.message);
+
+    await cargarOrdenes();
+    return data; // retorna el nuevo orderid
   };
 
+  // ── SP 2: sp_GetCustomerOrderHistory ────────────────────────────────────
+  // Supabase normaliza el nombre a minúsculas en el schema cache.
+  const handleVerHistorial = useCallback(async (customerid) => {
+    setLoadingHistorial(true);
+    setErrorHistorial(null);
+    setHistorial([]);
+
+    const { data, error } = await supabase.rpc('sp_getcustomerorderhistory', {
+      p_customerid: Number(customerid),
+    });
+
+    if (error) {
+      setErrorHistorial(error.message);
+    } else {
+      setHistorial(data || []);
+    }
+    setLoadingHistorial(false);
+  }, []);
+
+  const limpiarHistorial = () => { setHistorial([]); setErrorHistorial(null); };
+
+  // ── Eliminar pedido en cascada ───────────────────────────────────────────
   const handleEliminar = async (orderid) => {
     const confirmar = window.confirm(
       `¿Eliminar la orden #${orderid}? Esto también eliminará todos los ` +
-        `productos asociados a este pedido. Esta acción no se puede deshacer.`
+      `productos asociados. Esta acción no se puede deshacer.`
     );
     if (!confirmar) return;
 
-    // 1. Borra primero las líneas de orderdetails asociadas,
-    //    porque la foreign key no permite borrar la orden
-    //    mientras todavía tenga "hijos" en orderdetails.
     const { error: errorDetalles } = await supabase
-      .from('orderdetails')
-      .delete()
-      .eq('orderid', orderid);
+      .from('orderdetails').delete().eq('orderid', orderid);
+    if (errorDetalles) { alert(`Error al eliminar detalle: ${errorDetalles.message}`); return; }
 
-    if (errorDetalles) {
-      alert(`No se pudo eliminar el detalle del pedido: ${errorDetalles.message}`);
-      return;
-    }
-
-    // 2. Ya sin hijos, se borra la orden con seguridad.
     const { error } = await supabase.from('orders').delete().eq('orderid', orderid);
+    if (error) { alert(`Error al eliminar orden: ${error.message}`); return; }
 
-    if (error) {
-      alert(`No se pudo eliminar: ${error.message}`);
-      return;
-    }
-
-    if (ordenes.length === 1 && pagina > 0) {
-      setPagina((p) => p - 1);
-    } else {
-      cargarOrdenes();
-    }
+    ordenes.length === 1 && pagina > 0 ? setPagina((p) => p - 1) : cargarOrdenes();
   };
 
   return {
-    ordenes,
-    loading,
-    error,
-    busqueda,
-    pagina,
-    totalPaginas,
-    setPagina,
-    handleBuscar,
-    handleEliminar,
+    ordenes, loading, error,
+    busqueda, pagina, totalPaginas,
+    setPagina, handleBuscar, handleEliminar,
+    handleCrearPedido,
+    handleVerHistorial, limpiarHistorial,
+    historial, loadingHistorial, errorHistorial,
     recargar: cargarOrdenes,
   };
 }

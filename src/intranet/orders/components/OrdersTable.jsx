@@ -12,7 +12,14 @@ function formatearFecha(fechaISO) {
   });
 }
 
-export default function OrdersTable({ ordenes, loading, error, onVerDetalles, onEliminar }) {
+export default function OrdersTable({
+  ordenes,
+  loading,
+  error,
+  onVerDetalles,
+  onEliminar,
+  onVerHistorial,   // ← nuevo: abre HistorialClienteModal para el customerid de la fila
+}) {
   return (
     <div style={styles.tablaContenedor}>
       <table style={styles.tabla}>
@@ -69,9 +76,23 @@ export default function OrdersTable({ ordenes, loading, error, onVerDetalles, on
                   <td style={styles.td}>{formatearFecha(o.orderdate)}</td>
                   <td style={styles.td}>{o.shipperid}</td>
                   <td style={styles.td}>
+                    {/* Ver detalles de ESTA orden */}
                     <button style={styles.botonVer} onClick={() => onVerDetalles(o)}>
                       ver detalles
                     </button>
+
+                    {/* Historial de pedidos del CLIENTE de esta orden */}
+                    <button
+                      style={{
+                        ...styles.botonEditar,
+                        marginRight: '0.4rem',
+                      }}
+                      onClick={() => onVerHistorial(o.customerid)}
+                    >
+                      historial
+                    </button>
+
+                    {/* Eliminar esta orden */}
                     <button
                       style={styles.botonEliminar}
                       onClick={() => onEliminar(o.orderid)}
